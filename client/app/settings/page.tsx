@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AlertDialog, Button, Card, Chip, ToggleButton, ToggleButtonGroup, toast } from "@heroui/react";
+import { AlertDialog, Button, Card, Chip, Kbd, Separator, ToggleButton, ToggleButtonGroup, toast } from "@heroui/react";
 import { useTheme } from "next-themes";
 
 import { useApp } from "@/app/providers";
@@ -35,90 +35,66 @@ export default function SettingsPage() {
     const blob = new Blob([JSON.stringify(items, null, 2)], { type: "application/json" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = "expenses.json";
+    a.download = "tiyn.json";
     a.click();
     URL.revokeObjectURL(a.href);
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="pb-2">
-        <p className="text-xs text-muted">Настройки</p>
-        <h1 className="text-2xl font-semibold tracking-tight">Tiyn</h1>
+    <div className="mx-auto flex max-w-2xl flex-col gap-4">
+      <div className="flex items-center justify-between pb-2">
+        <h1 className="text-2xl font-semibold tracking-tight">Настройки</h1>
+        {health ? (
+          <Chip color="success" size="sm" variant="soft">
+            {health.count} записей
+          </Chip>
+        ) : (
+          <Chip color="danger" size="sm" variant="soft">
+            сервер недоступен
+          </Chip>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-        <Card>
-          <Card.Header>
-            <Card.Title>Внешний вид</Card.Title>
-          </Card.Header>
-          <Card.Content>
-            <div className="flex flex-col gap-2">
-              <span className="text-sm">Тема</span>
-              {mounted && (
-                <ToggleButtonGroup aria-label="Тема" disallowEmptySelection selectedKeys={new Set([theme ?? "system"])} selectionMode="single" size="sm" onSelectionChange={(k) => setTheme(String(Array.from(k)[0]))}>
-                  <ToggleButton id="light">Светлая</ToggleButton>
-                  <ToggleButton id="dark">Тёмная</ToggleButton>
-                  <ToggleButton id="system">Системная</ToggleButton>
-                </ToggleButtonGroup>
-              )}
-            </div>
-          </Card.Content>
-        </Card>
-
-        <Card>
-          <Card.Header className="flex-row items-center justify-between">
-            <Card.Title>Данные</Card.Title>
-            {health ? (
-              <Chip color="success" size="sm" variant="soft">
-                сервер · {health.count} записей
-              </Chip>
-            ) : (
-              <Chip color="danger" size="sm" variant="soft">
-                сервер недоступен
-              </Chip>
+      <Card>
+        <Card.Content className="flex flex-col gap-1 p-2">
+          <Row title="Тема">
+            {mounted && (
+              <ToggleButtonGroup aria-label="Тема" disallowEmptySelection selectedKeys={new Set([theme ?? "system"])} selectionMode="single" size="sm" onSelectionChange={(k) => setTheme(String(Array.from(k)[0]))}>
+                <ToggleButton id="light">Светлая</ToggleButton>
+                <ToggleButton id="dark">Тёмная</ToggleButton>
+                <ToggleButton id="system">Авто</ToggleButton>
+              </ToggleButtonGroup>
             )}
-          </Card.Header>
-          <Card.Content className="flex flex-col gap-3">
-            <Row title="Проверочный пример" text="Три записи: еда 1500, транспорт 600, еда 900. Заменяет все данные.">
-              <Button size="sm" variant="secondary" onPress={() => run(() => api.seed(false), "Пример загружен")}>
-                Загрузить
-              </Button>
-            </Row>
-            <Row title="Демо-данные" text="Проверочный пример плюс несколько месяцев случайных трат и бюджеты.">
-              <Button size="sm" variant="secondary" onPress={() => run(() => api.seed(true), "Демо-данные загружены")}>
-                Загрузить
-              </Button>
-            </Row>
-            <Row title="Экспорт" text="Все записи в JSON.">
-              <Button size="sm" variant="secondary" onPress={exportJson}>
-                Скачать
-              </Button>
-            </Row>
-            <Row title="Удалить всё" text="Все расходы за все месяцы. Необратимо.">
-              <Button size="sm" variant="danger-soft" onPress={() => setConfirmClear(true)}>
-                Удалить
-              </Button>
-            </Row>
-          </Card.Content>
-        </Card>
-
-        <Card className="lg:col-span-2">
-          <Card.Header>
-            <Card.Title>Горячие клавиши</Card.Title>
-          </Card.Header>
-          <Card.Content>
-            <ul className="flex flex-col gap-1.5 text-sm text-muted">
-              <li>
-                <kbd className="rounded border border-separator px-1.5 text-xs text-foreground">N</kbd> — новый расход
-              </li>
-              <li>
-                <kbd className="rounded border border-separator px-1.5 text-xs text-foreground">Esc</kbd> — закрыть окно
-              </li>
-            </ul>
-          </Card.Content>
-        </Card>
-      </div>
+          </Row>
+          <Row title="Новый расход">
+            <Kbd>
+              <Kbd.Content>N</Kbd.Content>
+            </Kbd>
+          </Row>
+          <Separator className="my-1" />
+          <Row text="Еда 1500, транспорт 600, еда 900. Заменяет все данные." title="Проверочный пример">
+            <Button size="sm" variant="secondary" onPress={() => run(() => api.seed(false), "Пример загружен")}>
+              Загрузить
+            </Button>
+          </Row>
+          <Row text="Пример плюс несколько месяцев трат и лимиты." title="Демо-данные">
+            <Button size="sm" variant="secondary" onPress={() => run(() => api.seed(true), "Демо-данные загружены")}>
+              Загрузить
+            </Button>
+          </Row>
+          <Row text="Все записи в JSON." title="Экспорт">
+            <Button size="sm" variant="secondary" onPress={exportJson}>
+              Скачать
+            </Button>
+          </Row>
+          <Separator className="my-1" />
+          <Row text="Все расходы за все месяцы. Необратимо." title="Удалить всё">
+            <Button size="sm" variant="danger-soft" onPress={() => setConfirmClear(true)}>
+              Удалить
+            </Button>
+          </Row>
+        </Card.Content>
+      </Card>
 
       <AlertDialog isOpen={confirmClear} onOpenChange={setConfirmClear}>
         <AlertDialog.Backdrop>
@@ -152,12 +128,12 @@ export default function SettingsPage() {
   );
 }
 
-function Row({ title, text, children }: { title: string; text: string; children: React.ReactNode }) {
+function Row({ title, text, children }: { title: string; text?: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-lg bg-default-soft/50 px-3 py-2.5">
+    <div className="flex items-center justify-between gap-4 px-3 py-2.5">
       <div>
         <p className="text-sm">{title}</p>
-        <p className="text-xs text-muted">{text}</p>
+        {text && <p className="text-xs text-muted">{text}</p>}
       </div>
       {children}
     </div>

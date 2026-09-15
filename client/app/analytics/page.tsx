@@ -60,7 +60,7 @@ export default function AnalyticsPage() {
             <Card>
               <Card.Header className="flex-row items-baseline justify-between">
                 <Card.Title>Календарь трат</Card.Title>
-                <Card.Description>чем темнее, тем больше</Card.Description>
+                <Card.Description>темнее — больше</Card.Description>
               </Card.Header>
               <Card.Content>{loading ? <Skeleton className="h-64 w-full" /> : <CalendarHeatmap items={monthItems} month={month} year={year} />}</Card.Content>
             </Card>
@@ -77,7 +77,7 @@ export default function AnalyticsPage() {
                 </Card.Header>
                 <Card.Content>
                   {recipients.length === 0 ? (
-                    <p className="text-sm text-muted">Получатели не указаны.</p>
+                    <p className="text-sm text-muted">Получатели не указаны</p>
                   ) : (
                     <ul className="flex flex-col gap-2">
                       {recipients.map((r) => {

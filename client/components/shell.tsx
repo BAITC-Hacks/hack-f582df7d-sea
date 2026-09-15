@@ -67,12 +67,9 @@ export function Shell({ children }: { children: React.ReactNode }) {
                 </Button>
               </Tooltip.Trigger>
               <Tooltip.Content>
-                <span className="flex items-center gap-2">
-                  Новый расход
-                  <Kbd>
-                    <Kbd.Content>N</Kbd.Content>
-                  </Kbd>
-                </span>
+                <Kbd>
+                  <Kbd.Content>N</Kbd.Content>
+                </Kbd>
               </Tooltip.Content>
             </Tooltip>
           </div>

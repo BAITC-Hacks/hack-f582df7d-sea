@@ -48,7 +48,7 @@ export default function Dashboard() {
           <Card.Content>
             {budgets.length === 0 ? (
               <div className="flex flex-col items-start gap-3 py-2">
-                <p className="text-sm text-muted">Лимиты не заданы. Задайте общий лимит и лимиты по категориям, чтобы видеть остаток.</p>
+                <p className="text-sm text-muted">Лимиты не заданы</p>
                 <NextLink className="button button--secondary button--sm" href="/budget">
                   Задать бюджет
                 </NextLink>
@@ -79,7 +79,7 @@ export default function Dashboard() {
               </div>
             ) : recent.length === 0 ? (
               <div className="flex flex-col items-start gap-3 py-2">
-                <p className="text-sm text-muted">За этот месяц записей нет.</p>
+                <p className="text-sm text-muted">Записей нет</p>
                 <Button size="sm" variant="secondary" onPress={() => setAddOpen(true)}>
                   Добавить первый расход
                 </Button>
@@ -95,7 +95,7 @@ export default function Dashboard() {
           </Card.Header>
           <Card.Content>
             {top.length === 0 ? (
-              <p className="text-sm text-muted">Пока нечего показать.</p>
+              <p className="text-sm text-muted">Записей нет</p>
             ) : (
               <ol className="flex flex-col gap-2.5">
                 {top.map((e, i) => (

@@ -48,8 +48,8 @@ export default function BudgetPage() {
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-5">
         <Card className="lg:col-span-2">
           <Card.Header>
-            <Card.Title>Лимиты</Card.Title>
-            <Card.Description>На месяц. Пустое поле — без лимита.</Card.Description>
+            <Card.Title>Лимиты на месяц</Card.Title>
+            <Card.Description>Пустое поле — без лимита</Card.Description>
           </Card.Header>
           <Card.Content className="flex flex-col gap-3">
             <TextField fullWidth value={form[TOTAL_BUDGET] ?? ""} onChange={(v) => setForm({ ...form, [TOTAL_BUDGET]: v })}>
@@ -75,7 +75,6 @@ export default function BudgetPage() {
         <Card className="lg:col-span-3">
           <Card.Header>
             <Card.Title>Использование</Card.Title>
-            <Card.Description>Факт за выбранный месяц против лимитов.</Card.Description>
           </Card.Header>
           <Card.Content>
             {budgets.length === 0 ? (
