@@ -31,6 +31,13 @@ class ProductCategory(str, Enum):
     OTHER = "Другое"
 
 
+class BudgetDB(Base):
+    __tablename__ = "budgets"
+
+    category = Column(String(50), primary_key=True)
+    amount = Column(Float, nullable=False)
+
+
 class ProductDB(Base):
     __tablename__ = "products"
 
@@ -134,6 +141,11 @@ class CategorySummary(BaseModel):
     total_amount: float = Field(..., description="Сумма расходов по категории")
     count: int = Field(..., description="Количество записей")
     percentage: float = Field(..., description="Процент от общего итога")
+
+
+class BudgetItem(BaseModel):
+    category: str = Field(..., description="Категория или __total__ для общего лимита")
+    amount: float = Field(..., ge=0)
 
 
 class RecipientSummary(BaseModel):
@@ -544,8 +556,23 @@ def delete_all_products(db: Session = Depends(get_db)):
 
 
 @app.get("/api/health", tags=["Служебные"], summary="Проверка доступности")
-def health():
-    return {"status": "ok"}
+def health(db: Session = Depends(get_db)):
+    return {"status": "ok", "count": db.query(ProductDB).count()}
+
+
+@app.get("/api/budgets", response_model=List[BudgetItem], tags=["Бюджет"], summary="Лимиты по категориям")
+def get_budgets(db: Session = Depends(get_db)):
+    return db.query(BudgetDB).all()
+
+
+@app.put("/api/budgets", response_model=List[BudgetItem], tags=["Бюджет"], summary="Сохранить лимиты")
+def put_budgets(items: List[BudgetItem], db: Session = Depends(get_db)):
+    db.query(BudgetDB).delete()
+    for it in items:
+        if it.amount > 0:
+            db.add(BudgetDB(category=it.category, amount=round(it.amount, 2)))
+    db.commit()
+    return db.query(BudgetDB).all()
 
 
 @app.post(
@@ -553,7 +580,10 @@ def health():
     tags=["Тестирование и инициализация"],
     summary="Загрузить тестовые данные проверочного сценария (1500, 600, 900)",
 )
-def seed_test_data(db: Session = Depends(get_db)):
+def seed_test_data(
+    demo: bool = Query(False, description="Добавить демо-данные за прошлые месяцы"),
+    db: Session = Depends(get_db),
+):
     """
     Сбрасывает базу и наполняет её контрольным примером из ТЗ:
     1. Еда — 1500
@@ -570,6 +600,43 @@ def seed_test_data(db: Session = Depends(get_db)):
         ProductDB(category="Еда", amount=900.0, date=today, description="Обед в кафе", recipient="друзья"),
     ]
     db.add_all(sample_items)
+
+    if demo:
+        import random
+
+        rnd = random.Random(42)
+        recipients = ["я", "я", "я", "друзья", "семья"]
+        templates = [
+            ("Еда", 800, 4500, ["Продукты", "Обед", "Кофе", "Столовая", "Доставка"], 9),
+            ("Транспорт", 200, 1500, ["Автобус", "Такси", "Проездной"], 5),
+            ("Развлечения", 1500, 8000, ["Кино", "Концерт", "Игры", "Бар"], 2),
+            ("Образование", 2000, 12000, ["Учебники", "Курс", "Печать"], 1),
+            ("Здоровье", 1000, 6000, ["Аптека", "Врач", "Спортзал"], 1),
+            ("Одежда", 5000, 20000, ["Кроссовки", "Куртка", "Футболка"], 1),
+            ("Другое", 500, 3000, ["Подарок", "Подписка", "Мелочи"], 2),
+        ]
+        for back in range(1, 6):
+            y, m = today.year, today.month - back
+            while m <= 0:
+                y, m = y - 1, m + 12
+            import calendar
+
+            days = calendar.monthrange(y, m)[1]
+            db.add(ProductDB(category="Жилье", amount=45000.0, date=dt_date(y, m, 1), description="Аренда", recipient="я"))
+            for cat, lo, hi, descs, n in templates:
+                for _ in range(max(1, int(n * rnd.uniform(0.6, 1.4)))):
+                    db.add(
+                        ProductDB(
+                            category=cat,
+                            amount=float(rnd.randrange(lo, hi, 50)),
+                            date=dt_date(y, m, rnd.randint(1, days)),
+                            description=rnd.choice(descs),
+                            recipient=rnd.choice(recipients),
+                        )
+                    )
+        if not db.query(BudgetDB).count():
+            db.add_all([BudgetDB(category="__total__", amount=90000), BudgetDB(category="Еда", amount=20000), BudgetDB(category="Развлечения", amount=8000)])
+
     db.commit()
 
     return {

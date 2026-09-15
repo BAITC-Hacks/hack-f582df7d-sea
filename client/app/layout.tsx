@@ -3,12 +3,11 @@ import { Metadata } from "next";
 
 import { Providers } from "./providers";
 
-import { siteConfig } from "@/config/site";
-import { Navbar } from "@/components/navbar";
+import { Shell } from "@/components/shell";
 
 export const metadata: Metadata = {
-  title: siteConfig.name,
-  description: siteConfig.description,
+  title: "Расходы",
+  description: "Учёт личных расходов",
   icons: { icon: "/favicon.ico" },
 };
 
@@ -18,8 +17,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head />
       <body className="min-h-screen bg-background font-sans text-foreground antialiased">
         <Providers themeProps={{ attribute: "class", defaultTheme: "light" }}>
-          <Navbar />
-          <main className="mx-auto w-full max-w-[1040px] px-4 pb-16 pt-2 sm:px-6">{children}</main>
+          <Shell>{children}</Shell>
         </Providers>
       </body>
     </html>

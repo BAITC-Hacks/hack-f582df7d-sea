@@ -1,45 +1,45 @@
 "use client";
 
-import { Card } from "@heroui/react";
+import { Card, Tooltip } from "@heroui/react";
 
-import { MONTHS_SHORT, formatMoney } from "@/lib/api";
+import { useApp } from "@/app/providers";
+import { MONTHS_SHORT, pad } from "@/lib/api";
 import type { MonthBreakdown } from "@/types";
 
-interface Props {
-  data: MonthBreakdown[];
-  year: number;
-  current: number;
-  onSelect: (m: number) => void;
-}
-
-export function MonthlyChart({ data, year, current, onSelect }: Props) {
+export function MonthlyChart({ data, year, current }: { data: MonthBreakdown[]; year: number; current: number }) {
+  const { money, setYm } = useApp();
   const max = Math.max(...data.map((d) => d.total_amount), 0);
   const yearTotal = data.reduce((s, d) => s + d.total_amount, 0);
+  const avg = yearTotal / Math.max(1, data.filter((d) => d.total_amount > 0).length);
   return (
     <Card>
       <Card.Header className="flex-row items-baseline justify-between">
-        <Card.Title>{year}</Card.Title>
-        <Card.Description className="tabular-nums">{formatMoney(yearTotal)}</Card.Description>
+        <Card.Title>По месяцам · {year}</Card.Title>
+        <Card.Description className="tabular-nums">
+          {money(yearTotal)} · в среднем {money(Math.round(avg))}
+        </Card.Description>
       </Card.Header>
       <Card.Content>
-        <div className="flex h-32 items-end gap-1.5">
+        <div className="relative flex h-36 items-end gap-1.5">
+          {max > 0 && avg > 0 && (
+            <div className="pointer-events-none absolute inset-x-0 border-t border-dashed border-separator" style={{ bottom: `calc(${(avg / max) * 100}% * (100% - 20px) / 100% + 20px)` }} />
+          )}
           {data.map((d) => {
             const h = max > 0 ? (d.total_amount / max) * 100 : 0;
             const active = d.month === current;
             return (
-              <button
-                key={d.month}
-                aria-label={`${d.month_name}: ${formatMoney(d.total_amount)}`}
-                className="group flex h-full flex-1 cursor-pointer flex-col items-center justify-end gap-1.5"
-                type="button"
-                onClick={() => onSelect(d.month)}
-              >
-                <div
-                  className={active ? "w-full rounded-sm bg-foreground" : "w-full rounded-sm bg-foreground/15 group-hover:bg-foreground/30"}
-                  style={{ height: `${Math.max(h, 2)}%` }}
-                />
-                <span className={active ? "text-[10px] text-foreground" : "text-[10px] text-muted"}>{MONTHS_SHORT[d.month - 1]}</span>
-              </button>
+              <Tooltip key={d.month} delay={0}>
+                <Tooltip.Trigger className="flex h-full flex-1 cursor-pointer flex-col items-center justify-end gap-1.5" onClick={() => setYm(`${year}-${pad(d.month)}`)}>
+                  <div
+                    className={active ? "w-full rounded-sm bg-foreground" : "w-full rounded-sm bg-foreground/15 transition hover:bg-foreground/35"}
+                    style={{ height: `calc(${Math.max(h, 1.5)}% - 20px)` }}
+                  />
+                  <span className={active ? "text-[10px] text-foreground" : "text-[10px] text-muted"}>{MONTHS_SHORT[d.month - 1]}</span>
+                </Tooltip.Trigger>
+                <Tooltip.Content>
+                  {d.month_name}: {money(d.total_amount)}
+                </Tooltip.Content>
+              </Tooltip>
             );
           })}
         </div>

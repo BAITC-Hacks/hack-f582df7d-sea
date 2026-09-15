@@ -1,12 +1,8 @@
-import { SVGProps } from "react";
-
-export type IconSvgProps = SVGProps<SVGSVGElement> & { size?: number };
-
 export interface Expense {
   id: number;
   category: string;
   amount: number;
-  date: string; // YYYY-MM-DD
+  date: string;
   description?: string | null;
   recipient?: string | null;
 }
@@ -51,3 +47,10 @@ export interface Category {
   name: string;
   key: string;
 }
+
+export interface Budget {
+  category: string;
+  amount: number;
+}
+
+export const TOTAL_BUDGET = "__total__";
