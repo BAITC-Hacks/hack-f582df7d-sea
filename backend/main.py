@@ -202,7 +202,7 @@ MONTH_NAMES = [
 ]
 
 app = FastAPI(
-    title="Учёт личных расходов студента API",
+    title="Tiyn API",
     description="REST API для учёта и аналитики расходов студента. Поддерживает CRUD операции сущности products, детальную аналитику по месяцам и годам, и полную спецификацию Swagger UI.",
     version="1.0.0",
     docs_url="/docs",

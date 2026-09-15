@@ -1,4 +1,4 @@
 export const siteConfig = {
-  name: "Расходы",
+  name: "Tiyn",
   description: "Учёт личных расходов по месяцам и категориям",
 };

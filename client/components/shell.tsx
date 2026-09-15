@@ -43,7 +43,7 @@ export function Shell({ children }: { children: React.ReactNode }) {
       <header className="sticky top-0 z-30 border-b border-separator bg-background/80 backdrop-blur">
         <div className="mx-auto flex h-14 w-full max-w-[1120px] items-center gap-6 px-4 sm:px-6">
           <NextLink className="text-sm font-semibold tracking-tight" href="/">
-            Расходы
+            Tiyn
           </NextLink>
           <nav className="hidden items-center gap-1 md:flex">
             {NAV.map((n) => (

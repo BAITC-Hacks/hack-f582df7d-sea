@@ -6,8 +6,8 @@ import { Providers } from "./providers";
 import { Shell } from "@/components/shell";
 
 export const metadata: Metadata = {
-  title: "Расходы",
-  description: "Учёт личных расходов",
+  title: "Tiyn — учёт расходов",
+  description: "Tiyn: учёт личных расходов по месяцам и категориям",
   icons: { icon: "/favicon.ico" },
 };
 

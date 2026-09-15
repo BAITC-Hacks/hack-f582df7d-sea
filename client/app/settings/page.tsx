@@ -44,7 +44,7 @@ export default function SettingsPage() {
     <div className="flex flex-col gap-4">
       <div className="pb-2">
         <p className="text-xs text-muted">Настройки</p>
-        <h1 className="text-2xl font-semibold tracking-tight">Приложение</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Tiyn</h1>
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
