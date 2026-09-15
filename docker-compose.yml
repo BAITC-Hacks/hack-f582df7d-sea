@@ -1,0 +1,16 @@
+services:
+  backend:
+    build: ./backend
+    ports: ["8001:8001"]
+    volumes: ["backend-data:/data"]
+    environment:
+      DATABASE_URL: sqlite:////data/expenses.db
+  frontend:
+    build:
+      context: ./client
+      args:
+        API_URL: http://backend:8001
+    ports: ["3000:3000"]
+    depends_on: [backend]
+volumes:
+  backend-data:

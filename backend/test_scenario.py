@@ -81,3 +81,12 @@ def test_hackathon_verification_scenario():
 
 if __name__ == "__main__":
     test_hackathon_verification_scenario()
+
+
+def test_delete_all_and_empty_summary():
+    client.post("/api/seed")
+    r = client.delete("/api/products")
+    assert r.status_code == 200
+    today = date.today()
+    s = client.get(f"/api/products/summary?year={today.year}&month={today.month}").json()
+    assert s["total_amount"] == 0 and s["total_count"] == 0 and s["category_breakdown"] == []

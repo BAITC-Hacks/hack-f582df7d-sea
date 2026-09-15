@@ -1,7 +1,19 @@
+# python
 venv/
+.venv/
 __pycache__/
 *.pyc
 *.pyo
-expenses.db
-.env
 *.db
+expenses.db
+
+# node / next
+node_modules/
+.next/
+out/
+*.log
+
+# env & os
+.env
+.env.local
+.DS_Store

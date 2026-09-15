@@ -10,6 +10,10 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import Column, Date, Float, Integer, String, Text, create_engine, extract
 from sqlalchemy.orm import declarative_base, sessionmaker, Session
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 # Database setup
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./expenses.db")
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
@@ -433,6 +437,25 @@ def delete_product(product_id: int, db: Session = Depends(get_db)):
     return {"message": f"Расход с ID {product_id} успешно удален", "id": product_id}
 
 
+# CRUD: Delete all
+@app.delete(
+    "/api/products",
+    status_code=status.HTTP_200_OK,
+    tags=["Расходы (Products)"],
+    summary="Удалить все расходы",
+)
+def delete_all_products(db: Session = Depends(get_db)):
+    """Полностью очищает список расходов (используется кнопкой «Очистить всё»)."""
+    deleted = db.query(ProductDB).delete()
+    db.commit()
+    return {"message": "Все расходы удалены", "deleted": deleted}
+
+
+@app.get("/api/health", tags=["Служебные"], summary="Проверка доступности")
+def health():
+    return {"status": "ok"}
+
+
 # Seed / Reset helper for testing hackathon scenario
 @app.post(
     "/api/seed",
@@ -469,4 +492,9 @@ def seed_test_data(db: Session = Depends(get_db)):
 if __name__ == "__main__":
     import uvicorn
 
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run(
+        "main:app",
+        host=os.getenv("HOST", "0.0.0.0"),
+        port=int(os.getenv("PORT", "8001")),
+        reload=True,
+    )
