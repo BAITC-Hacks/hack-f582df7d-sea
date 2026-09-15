@@ -1,7 +1,6 @@
-import type { Category, Expense, Summary } from "@/types";
+import type { Category, Expense, ExpenseInput, Summary } from "@/types";
 
 // В браузере ходим на относительный /api (Next проксирует на FastAPI, см. next.config.mjs).
-// NEXT_PUBLIC_API_URL можно задать, если фронт и бэк развёрнуты отдельно.
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 export class ApiError extends Error {
@@ -37,7 +36,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       ...init,
     });
   } catch {
-    throw new ApiError(0, "Сервер недоступен. Убедитесь, что бэкенд запущен.");
+    throw new ApiError(0, "Сервер недоступен. Убедитесь, что бэкенд запущен (порт 8001).");
   }
   if (!res.ok) {
     let body: unknown = null;
@@ -55,11 +54,14 @@ export const api = {
   categories: () => request<Category[]>("/api/categories"),
   summary: (year: number, month: number) =>
     request<Summary>(`/api/products/summary?year=${year}&month=${month}`),
-  create: (data: Omit<Expense, "id">) =>
+  create: (data: ExpenseInput) =>
     request<Expense>("/api/products", { method: "POST", body: JSON.stringify(data) }),
+  update: (id: number, data: ExpenseInput) =>
+    request<Expense>(`/api/products/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   remove: (id: number) => request<{ message: string }>(`/api/products/${id}`, { method: "DELETE" }),
   seed: () => request<{ message: string }>("/api/seed", { method: "POST" }),
   clear: () => request<{ message: string }>("/api/products", { method: "DELETE" }),
+  exportUrl: (year: number, month: number) => `${BASE}/api/products/export.csv?year=${year}&month=${month}`,
 };
 
 export const formatMoney = (n: number) =>
@@ -68,4 +70,12 @@ export const formatMoney = (n: number) =>
 export const formatDate = (iso: string) => {
   const [y, m, d] = iso.split("-");
   return `${d}.${m}.${y}`;
+};
+
+export const MONTHS = ["Январь", "Февраль", "Март", "Апрель", "Май", "Июнь", "Июль", "Август", "Сентябрь", "Октябрь", "Ноябрь", "Декабрь"];
+export const MONTHS_SHORT = ["Янв", "Фев", "Мар", "Апр", "Май", "Июн", "Июл", "Авг", "Сен", "Окт", "Ноя", "Дек"];
+export const pad = (n: number) => String(n).padStart(2, "0");
+export const todayIso = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 };

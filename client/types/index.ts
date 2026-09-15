@@ -1,8 +1,6 @@
 import { SVGProps } from "react";
 
-export type IconSvgProps = SVGProps<SVGSVGElement> & {
-  size?: number;
-};
+export type IconSvgProps = SVGProps<SVGSVGElement> & { size?: number };
 
 export interface Expense {
   id: number;
@@ -10,13 +8,22 @@ export interface Expense {
   amount: number;
   date: string; // YYYY-MM-DD
   description?: string | null;
+  recipient?: string | null;
 }
+
+export type ExpenseInput = Omit<Expense, "id">;
 
 export interface CategorySummary {
   category: string;
   total_amount: number;
   count: number;
   percentage: number;
+}
+
+export interface RecipientSummary {
+  recipient: string;
+  total_amount: number;
+  count: number;
 }
 
 export interface MonthBreakdown {
@@ -34,6 +41,10 @@ export interface Summary {
   category_breakdown: CategorySummary[];
   monthly_breakdown: MonthBreakdown[] | null;
   items: Expense[];
+  recipient_breakdown: RecipientSummary[];
+  previous_total: number | null;
+  avg_per_day: number;
+  max_expense: Expense | null;
 }
 
 export interface Category {

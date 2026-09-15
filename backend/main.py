@@ -42,9 +42,18 @@ class ProductDB(Base):
     amount = Column(Float, nullable=False)
     date = Column(Date, nullable=False, index=True)
     description = Column(Text, nullable=True)
+    recipient = Column(String(100), nullable=True)
 
 
 Base.metadata.create_all(bind=engine)
+
+# Простая миграция: добавляем колонку recipient в уже существующую БД
+with engine.begin() as conn:
+    from sqlalchemy import inspect, text
+
+    cols = [c["name"] for c in inspect(conn).get_columns("products")]
+    if "recipient" not in cols:
+        conn.execute(text("ALTER TABLE products ADD COLUMN recipient VARCHAR(100)"))
 
 
 # DB Dependency
@@ -79,6 +88,12 @@ class ProductBase(BaseModel):
         description="Необязательное описание расхода",
         examples=["Обед в столовой"],
     )
+    recipient: Optional[str] = Field(
+        None,
+        max_length=100,
+        description="На кого потратили (необязательно): я, друзья, семья...",
+        examples=["я"],
+    )
 
     @field_validator("amount")
     @classmethod
@@ -97,6 +112,7 @@ class ProductUpdate(BaseModel):
     amount: Optional[float] = Field(None, gt=0, description="Сумма расхода (строго > 0)")
     date: Optional[dt_date] = Field(None, description="Дата расхода")
     description: Optional[str] = Field(None, description="Необязательное описание")
+    recipient: Optional[str] = Field(None, max_length=100, description="На кого потратили")
 
     @field_validator("amount")
     @classmethod
@@ -112,6 +128,7 @@ class ProductResponse(BaseModel):
     amount: float = Field(..., description="Сумма расхода")
     date: dt_date = Field(..., description="Дата расхода")
     description: Optional[str] = Field(None, description="Описание расхода")
+    recipient: Optional[str] = Field(None, description="На кого потратили")
 
     class Config:
         from_attributes = True
@@ -122,6 +139,12 @@ class CategorySummary(BaseModel):
     total_amount: float = Field(..., description="Сумма расходов по категории")
     count: int = Field(..., description="Количество записей")
     percentage: float = Field(..., description="Процент от общего итога")
+
+
+class RecipientSummary(BaseModel):
+    recipient: str = Field(..., description="Получатель / на кого потратили")
+    total_amount: float = Field(..., description="Сумма")
+    count: int = Field(..., description="Количество записей")
 
 
 class MonthBreakdown(BaseModel):
@@ -145,6 +168,14 @@ class SummaryResponse(BaseModel):
     items: List[ProductResponse] = Field(
         ..., description="Полный список всех трат за выбранный период для фронтенда и графиков"
     )
+    recipient_breakdown: List[RecipientSummary] = Field(
+        default_factory=list, description="Итоги по получателям («на кого потратили»)"
+    )
+    previous_total: Optional[float] = Field(
+        None, description="Итог за предыдущий месяц (для сравнения), если указан month"
+    )
+    avg_per_day: float = Field(0.0, description="Средний расход в день за период")
+    max_expense: Optional[ProductResponse] = Field(None, description="Самая крупная трата периода")
 
 
 MONTH_NAMES = [
@@ -215,6 +246,7 @@ def create_product(product: ProductCreate, db: Session = Depends(get_db)):
         amount=product.amount,
         date=product.date,
         description=product.description,
+        recipient=(product.recipient or "").strip() or None,
     )
     db.add(db_product)
     db.commit()
@@ -327,7 +359,49 @@ def get_products_summary(
 
     items = [ProductResponse.model_validate(r) for r in records]
 
+    # По получателям
+    recipient_map = {}
+    for r in records:
+        key = r.recipient or "Не указано"
+        recipient_map.setdefault(key, {"amount": 0.0, "count": 0})
+        recipient_map[key]["amount"] += r.amount
+        recipient_map[key]["count"] += 1
+    recipient_breakdown = [
+        RecipientSummary(recipient=k, total_amount=round(v["amount"], 2), count=v["count"])
+        for k, v in sorted(recipient_map.items(), key=lambda x: x[1]["amount"], reverse=True)
+    ] if any(r.recipient for r in records) else []
+
+    # Предыдущий месяц
+    previous_total = None
+    if month is not None:
+        py, pm = (year - 1, 12) if month == 1 else (year, month - 1)
+        prev = (
+            db.query(ProductDB)
+            .filter(extract("year", ProductDB.date) == py, extract("month", ProductDB.date) == pm)
+            .all()
+        )
+        previous_total = round(sum(r.amount for r in prev), 2)
+
+    # Средний в день
+    import calendar
+
+    if month is not None:
+        today = dt_date.today()
+        if year == today.year and month == today.month:
+            days = today.day
+        else:
+            days = calendar.monthrange(year, month)[1]
+    else:
+        days = 366 if calendar.isleap(year) else 365
+    avg_per_day = round(total_amount / days, 2) if days else 0.0
+
+    max_expense = max(records, key=lambda r: r.amount) if records else None
+
     return SummaryResponse(
+        recipient_breakdown=recipient_breakdown,
+        previous_total=previous_total,
+        avg_per_day=avg_per_day,
+        max_expense=ProductResponse.model_validate(max_expense) if max_expense else None,
         year=year,
         month=month,
         total_amount=total_amount,
@@ -335,6 +409,43 @@ def get_products_summary(
         category_breakdown=category_breakdown,
         monthly_breakdown=monthly_breakdown,
         items=items,
+    )
+
+
+# Export CSV
+@app.get(
+    "/api/products/export.csv",
+    tags=["Аналитика и итоги"],
+    summary="Экспорт расходов за период в CSV",
+)
+def export_csv(
+    year: int = Query(...),
+    month: Optional[int] = Query(None, ge=1, le=12),
+    db: Session = Depends(get_db),
+):
+    import csv
+    import io
+
+    from fastapi.responses import Response
+
+    query = db.query(ProductDB).filter(extract("year", ProductDB.date) == year)
+    if month is not None:
+        query = query.filter(extract("month", ProductDB.date) == month)
+    rows = query.order_by(ProductDB.date.asc(), ProductDB.id.asc()).all()
+
+    buf = io.StringIO()
+    buf.write("\ufeff")  # BOM для Excel
+    w = csv.writer(buf, delimiter=";")
+    w.writerow(["Дата", "Категория", "Сумма", "Описание", "На кого"])
+    for r in rows:
+        w.writerow([r.date.isoformat(), r.category, f"{r.amount:.2f}", r.description or "", r.recipient or ""])
+    w.writerow([])
+    w.writerow(["Итого", "", f"{sum(r.amount for r in rows):.2f}", "", ""])
+    name = f"expenses-{year}-{month:02d}.csv" if month else f"expenses-{year}.csv"
+    return Response(
+        content=buf.getvalue(),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="{name}"'},
     )
 
 
@@ -378,6 +489,7 @@ def update_product_put(
     db_product.amount = product.amount
     db_product.date = product.date
     db_product.description = product.description
+    db_product.recipient = (product.recipient or "").strip() or None
 
     db.commit()
     db.refresh(db_product)
@@ -410,6 +522,7 @@ def update_product_patch(
         db_product.date = product.date
     if product.description is not None:
         db_product.description = product.description
+    db_product.recipient = (product.recipient or "").strip() or None
 
     db.commit()
     db.refresh(db_product)
@@ -474,9 +587,9 @@ def seed_test_data(db: Session = Depends(get_db)):
     today = dt_date.today()
 
     sample_items = [
-        ProductDB(category="Еда", amount=1500.0, date=today, description="Продукты на неделю"),
-        ProductDB(category="Транспорт", amount=600.0, date=today, description="Проездной"),
-        ProductDB(category="Еда", amount=900.0, date=today, description="Обед в кафе"),
+        ProductDB(category="Еда", amount=1500.0, date=today, description="Продукты на неделю", recipient="я"),
+        ProductDB(category="Транспорт", amount=600.0, date=today, description="Проездной", recipient="я"),
+        ProductDB(category="Еда", amount=900.0, date=today, description="Обед в кафе", recipient="друзья"),
     ]
     db.add_all(sample_items)
     db.commit()
