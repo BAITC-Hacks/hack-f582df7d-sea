@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
-# Установка всех зависимостей проекта (бэкенд + фронтенд). Запускать один раз.
+# install backend + frontend deps
 set -e
 cd "$(dirname "$0")"
 
-echo "==> Backend: создаём venv и ставим зависимости"
+echo "backend"
 cd backend
 if [ ! -d venv ]; then python3 -m venv venv; fi
 ./venv/bin/pip install -q --upgrade pip >/dev/null 2>&1 || true
@@ -11,10 +11,10 @@ if [ ! -d venv ]; then python3 -m venv venv; fi
 [ -f .env ] || cp ../.env.example .env
 cd ..
 
-echo "==> Frontend: ставим npm-зависимости"
+echo "frontend"
 cd client
 if command -v bun >/dev/null 2>&1; then bun install; else npm install; fi
 cd ..
 
 echo
-echo "Готово. Запуск: ./start.sh  (или make dev)"
+echo "done: ./start.sh"

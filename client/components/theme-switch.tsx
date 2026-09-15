@@ -1,42 +1,29 @@
-import { FC, useEffect, useState } from "react";
+"use client";
+
+import { useEffect, useState } from "react";
+import { Button } from "@heroui/react";
 import { useTheme } from "next-themes";
-import clsx from "clsx";
 
-import { SunFilledIcon, MoonFilledIcon } from "@/components/icons";
-
-export interface ThemeSwitchProps {
-  className?: string;
-}
-
-export const ThemeSwitch: FC<ThemeSwitchProps> = ({ className }) => {
-  const [isMounted, setIsMounted] = useState(false);
+export function ThemeSwitch() {
+  const [mounted, setMounted] = useState(false);
   const { setTheme, resolvedTheme } = useTheme();
 
-  const isLight = resolvedTheme === "light";
+  useEffect(() => setMounted(true), []);
+  if (!mounted) return <div className="h-9 w-9" />;
 
-  const handleToggle = () => {
-    setTheme(isLight ? "dark" : "light");
-  };
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
-
-
-  if (!isMounted) return <div aria-hidden className="w-6 h-6" />;
-
+  const isDark = resolvedTheme === "dark";
   return (
-    <button
-      aria-label={`Switch to ${isLight ? "dark" : "light"} mode`}
-      className={clsx(
-        "px-px transition-opacity hover:opacity-80 cursor-pointer",
-        "inline-flex items-center justify-center",
-        "w-auto h-auto bg-transparent rounded-lg text-muted",
-        className,
+    <Button isIconOnly aria-label="Тема" size="sm" variant="ghost" onPress={() => setTheme(isDark ? "light" : "dark")}>
+      {isDark ? (
+        <svg fill="none" height="16" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" width="16">
+          <circle cx="12" cy="12" r="4" />
+          <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" strokeLinecap="round" />
+        </svg>
+      ) : (
+        <svg fill="none" height="16" stroke="currentColor" strokeWidth="1.8" viewBox="0 0 24 24" width="16">
+          <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z" strokeLinejoin="round" />
+        </svg>
       )}
-      onClick={handleToggle}
-    >
-      {isLight ? <SunFilledIcon size={22} /> : <MoonFilledIcon size={22} />}
-    </button>
+    </Button>
   );
-};
+}

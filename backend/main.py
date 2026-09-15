@@ -14,14 +14,12 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Database setup
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./expenses.db")
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
 
-# Enum categories
 class ProductCategory(str, Enum):
     FOOD = "Еда"
     TRANSPORT = "Транспорт"
@@ -33,7 +31,6 @@ class ProductCategory(str, Enum):
     OTHER = "Другое"
 
 
-# SQLAlchemy DB Model
 class ProductDB(Base):
     __tablename__ = "products"
 
@@ -47,7 +44,7 @@ class ProductDB(Base):
 
 Base.metadata.create_all(bind=engine)
 
-# Простая миграция: добавляем колонку recipient в уже существующую БД
+# add recipient column to existing db
 with engine.begin() as conn:
     from sqlalchemy import inspect, text
 
@@ -56,7 +53,6 @@ with engine.begin() as conn:
         conn.execute(text("ALTER TABLE products ADD COLUMN recipient VARCHAR(100)"))
 
 
-# DB Dependency
 def get_db():
     db = SessionLocal()
     try:
@@ -65,7 +61,6 @@ def get_db():
         db.close()
 
 
-# Pydantic Schemas
 class ProductBase(BaseModel):
     category: ProductCategory = Field(
         ...,
@@ -194,7 +189,6 @@ MONTH_NAMES = [
     "Декабрь",
 ]
 
-# FastAPI App
 app = FastAPI(
     title="Учёт личных расходов студента API",
     description="REST API для учёта и аналитики расходов студента. Поддерживает CRUD операции сущности products, детальную аналитику по месяцам и годам, и полную спецификацию Swagger UI.",
@@ -203,7 +197,6 @@ app = FastAPI(
     redoc_url="/redoc",
 )
 
-# CORS Middleware (Fully open for frontend integration)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -225,7 +218,6 @@ def get_categories():
     return [{"name": cat.value, "key": cat.name} for cat in ProductCategory]
 
 
-# CRUD: Create
 @app.post(
     "/api/products",
     response_model=ProductResponse,
@@ -254,7 +246,6 @@ def create_product(product: ProductCreate, db: Session = Depends(get_db)):
     return db_product
 
 
-# CRUD: Read List (All expenses or filtered)
 @app.get(
     "/api/products",
     response_model=List[ProductResponse],
@@ -283,7 +274,6 @@ def list_products(
     return query.order_by(ProductDB.date.desc(), ProductDB.id.desc()).all()
 
 
-# Analytics / Summary: get API на получение итогов расходов за год и месяц + все траты периода
 @app.get(
     "/api/products/summary",
     response_model=SummaryResponse,
@@ -314,7 +304,6 @@ def get_products_summary(
     total_amount = round(sum(r.amount for r in records), 2)
     total_count = len(records)
 
-    # Категории
     category_map = {}
     for r in records:
         cat = r.category
@@ -336,7 +325,6 @@ def get_products_summary(
             )
         )
 
-    # Помесячная разбивка года (для графиков динамики)
     monthly_breakdown = []
     all_year_records = (
         db.query(ProductDB).filter(extract("year", ProductDB.date) == year).all()
@@ -359,7 +347,6 @@ def get_products_summary(
 
     items = [ProductResponse.model_validate(r) for r in records]
 
-    # По получателям
     recipient_map = {}
     for r in records:
         key = r.recipient or "Не указано"
@@ -371,7 +358,6 @@ def get_products_summary(
         for k, v in sorted(recipient_map.items(), key=lambda x: x[1]["amount"], reverse=True)
     ] if any(r.recipient for r in records) else []
 
-    # Предыдущий месяц
     previous_total = None
     if month is not None:
         py, pm = (year - 1, 12) if month == 1 else (year, month - 1)
@@ -382,7 +368,6 @@ def get_products_summary(
         )
         previous_total = round(sum(r.amount for r in prev), 2)
 
-    # Средний в день
     import calendar
 
     if month is not None:
@@ -412,7 +397,6 @@ def get_products_summary(
     )
 
 
-# Export CSV
 @app.get(
     "/api/products/export.csv",
     tags=["Аналитика и итоги"],
@@ -434,7 +418,7 @@ def export_csv(
     rows = query.order_by(ProductDB.date.asc(), ProductDB.id.asc()).all()
 
     buf = io.StringIO()
-    buf.write("\ufeff")  # BOM для Excel
+    buf.write("\ufeff")  # BOM for Excel
     w = csv.writer(buf, delimiter=";")
     w.writerow(["Дата", "Категория", "Сумма", "Описание", "На кого"])
     for r in rows:
@@ -449,7 +433,6 @@ def export_csv(
     )
 
 
-# CRUD: Read Single
 @app.get(
     "/api/products/{product_id}",
     response_model=ProductResponse,
@@ -467,7 +450,6 @@ def get_product(product_id: int, db: Session = Depends(get_db)):
     return db_product
 
 
-# CRUD: Update Full
 @app.put(
     "/api/products/{product_id}",
     response_model=ProductResponse,
@@ -496,7 +478,6 @@ def update_product_put(
     return db_product
 
 
-# CRUD: Update Partial
 @app.patch(
     "/api/products/{product_id}",
     response_model=ProductResponse,
@@ -529,7 +510,6 @@ def update_product_patch(
     return db_product
 
 
-# CRUD: Delete
 @app.delete(
     "/api/products/{product_id}",
     status_code=status.HTTP_200_OK,
@@ -550,7 +530,6 @@ def delete_product(product_id: int, db: Session = Depends(get_db)):
     return {"message": f"Расход с ID {product_id} успешно удален", "id": product_id}
 
 
-# CRUD: Delete all
 @app.delete(
     "/api/products",
     status_code=status.HTTP_200_OK,
@@ -569,7 +548,6 @@ def health():
     return {"status": "ok"}
 
 
-# Seed / Reset helper for testing hackathon scenario
 @app.post(
     "/api/seed",
     tags=["Тестирование и инициализация"],

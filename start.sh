@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Запуск бэкенда (FastAPI, :8001) и фронтенда (Next.js, :3000) одной командой.
+# run backend :8001 + frontend :3000
 set -e
 cd "$(dirname "$0")"
 
 [ -d backend/venv ] && [ -d client/node_modules ] || ./setup.sh
 
-cleanup() { echo; echo "Останавливаем..."; kill 0 2>/dev/null; }
+cleanup() { kill 0 2>/dev/null; }
 trap cleanup EXIT INT TERM
 
 echo "==> Backend:  http://localhost:8001  (Swagger: /docs)"

@@ -1,6 +1,5 @@
 import type { Category, Expense, ExpenseInput, Summary } from "@/types";
 
-// В браузере ходим на относительный /api (Next проксирует на FastAPI, см. next.config.mjs).
 const BASE = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 export class ApiError extends Error {

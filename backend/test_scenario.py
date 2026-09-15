@@ -4,8 +4,7 @@ from main import app, ProductDB, SessionLocal
 
 client = TestClient(app)
 
-def test_hackathon_verification_scenario():
-    # Clear DB
+def test_verification_scenario():
     db = SessionLocal()
     db.query(ProductDB).delete()
     db.commit()
@@ -15,7 +14,6 @@ def test_hackathon_verification_scenario():
     current_year = date.today().year
     current_month = date.today().month
 
-    # 1. Add 3 expenses
     r1 = client.post("/api/products", json={
         "category": "Еда",
         "amount": 1500.0,
@@ -43,7 +41,6 @@ def test_hackathon_verification_scenario():
     assert r3.status_code == 201
     p3 = r3.json()
 
-    # 2. Check summary: total 3000, Еда 2400, Транспорт 600
     res_summary = client.get(f"/api/products/summary?year={current_year}&month={current_month}")
     assert res_summary.status_code == 200
     summary = res_summary.json()
@@ -54,11 +51,9 @@ def test_hackathon_verification_scenario():
     assert categories["Еда"] == 2400.0
     assert categories["Транспорт"] == 600.0
 
-    # 3. Delete expense with 900
     del_res = client.delete(f"/api/products/{p3['id']}")
     assert del_res.status_code == 200
 
-    # 4. Check summary again: total 2100, Еда 1500, Транспорт 600
     res_summary2 = client.get(f"/api/products/summary?year={current_year}&month={current_month}")
     assert res_summary2.status_code == 200
     summary2 = res_summary2.json()
@@ -69,7 +64,6 @@ def test_hackathon_verification_scenario():
     assert categories2["Еда"] == 1500.0
     assert categories2["Транспорт"] == 600.0
 
-    # 5. Test invalid amount (<= 0)
     neg_res = client.post("/api/products", json={
         "category": "Еда",
         "amount": -50.0,
@@ -77,10 +71,9 @@ def test_hackathon_verification_scenario():
     })
     assert neg_res.status_code == 422
 
-    print("ALL TESTS PASSED PERFECTLY!")
 
 if __name__ == "__main__":
-    test_hackathon_verification_scenario()
+    test_verification_scenario()
 
 
 def test_delete_all_and_empty_summary():
